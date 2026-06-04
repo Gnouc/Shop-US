@@ -1,34 +1,19 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const cloudinary = require('../../config/cloudinary');
+const streamifier = require('streamifier');
 const authMiddleware = require('../../middlewares/auth.middleware');
 const roleMiddleware = require('../../middlewares/role.middleware');
 
 const router = express.Router();
 
-// Tạo thư mục uploads nếu chưa có
-const uploadDir = path.join(process.cwd(), 'uploads', 'products');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Multer config
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
-});
+// Multer config — lưu vào memory (không ghi file), sau đó upload lên Cloudinary
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|webp/;
-  const extOk = allowedTypes.test(path.extname(file.originalname).toLowerCase());
   const mimeOk = allowedTypes.test(file.mimetype);
-  if (extOk && mimeOk) {
+  if (mimeOk) {
     cb(null, true);
   } else {
     cb(new Error('Chỉ cho phép ảnh JPG, PNG, WEBP'));
@@ -41,21 +26,53 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
+// Helper: upload buffer lên Cloudinary
+function uploadToCloudinary(fileBuffer, options = {}) {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'us-health-store/products',
+        resource_type: 'image',
+        ...options,
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    streamifier.createReadStream(fileBuffer).pipe(uploadStream);
+  });
+}
+
 // Upload single image
 router.post(
   '/image',
   authMiddleware,
   roleMiddleware('ADMIN'),
   upload.single('image'),
-  (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No file uploaded' });
+      }
+
+      const result = await uploadToCloudinary(req.file.buffer);
+
+      res.json({
+        success: true,
+        data: {
+          imageUrl: result.secure_url,
+          publicId: result.public_id,
+          filename: result.public_id, // dùng publicId làm filename để xóa sau
+        },
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Upload failed',
+      });
     }
-    const imageUrl = `/uploads/products/${req.file.filename}`;
-    res.json({
-      success: true,
-      data: { imageUrl, filename: req.file.filename },
-    });
   }
 );
 
@@ -65,33 +82,52 @@ router.post(
   authMiddleware,
   roleMiddleware('ADMIN'),
   upload.array('images', 5),
-  (req, res) => {
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ success: false, message: 'No files uploaded' });
+  async (req, res) => {
+    try {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ success: false, message: 'No files uploaded' });
+      }
+
+      const results = await Promise.all(
+        req.files.map((file) => uploadToCloudinary(file.buffer))
+      );
+
+      const imageUrls = results.map((r) => ({
+        imageUrl: r.secure_url,
+        publicId: r.public_id,
+        filename: r.public_id,
+      }));
+
+      res.json({ success: true, data: imageUrls });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Upload failed',
+      });
     }
-    const imageUrls = req.files.map((f) => ({
-      imageUrl: `/uploads/products/${f.filename}`,
-      filename: f.filename,
-    }));
-    res.json({ success: true, data: imageUrls });
   }
 );
 
-// Delete image
+// Delete image from Cloudinary
 router.delete(
   '/image',
   authMiddleware,
   roleMiddleware('ADMIN'),
-  (req, res) => {
-    const { filename } = req.body;
-    if (!filename) {
-      return res.status(400).json({ success: false, message: 'Filename required' });
+  async (req, res) => {
+    try {
+      const { filename } = req.body; // filename = publicId
+      if (!filename) {
+        return res.status(400).json({ success: false, message: 'Filename/publicId required' });
+      }
+
+      await cloudinary.uploader.destroy(filename);
+
+      res.json({ success: true, message: 'Image deleted from Cloudinary' });
+    } catch (error) {
+      console.error('Delete error:', error);
+      res.status(500).json({ success: false, message: 'Delete failed' });
     }
-    const filePath = path.join(uploadDir, filename);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-    res.json({ success: true, message: 'File deleted' });
   }
 );
 
