@@ -10,9 +10,8 @@ node_modules/
 dist/
 build/
 
-# Uploads
-backend/uploads/products/*
-!backend/uploads/products/.gitkeep
+# Product images committed for deployment defaults.
+# Runtime uploads should still use external storage in production.
 
 # OS
 .DS_Store
