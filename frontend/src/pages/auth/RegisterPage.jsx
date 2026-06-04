@@ -1,159 +1,157 @@
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { User, Mail, Lock, Phone } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Form, Input, Button, Card, Typography, App } from 'antd';
+import { UserOutlined, MailOutlined, LockOutlined, PhoneOutlined } from '@ant-design/icons';
+import { useMutation } from '@tanstack/react-query';
+import { authApi } from '@/api/authApi';
+import { useAuthStore } from '@/stores/useAuthStore';
 
-const registerSchema = z.object({
-  name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự'),
-  email: z.string().email('Email không hợp lệ'),
-  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
-  confirmPassword: z.string(),
-  phone: z.string().optional(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Mật khẩu không khớp',
-  path: ['confirmPassword'],
-});
+const { Title, Text } = Typography;
 
 export default function RegisterPage() {
-  const { register: registerUser, isRegistering } = useAuth();
-  
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(registerSchema),
+  const { message } = App.useApp();
+  const navigate = useNavigate();
+  const { setAuth } = useAuthStore();
+  const [form] = Form.useForm();
+
+  const registerMutation = useMutation({
+    mutationFn: authApi.register,
+    onSuccess: (data) => {
+      setAuth(data.data.user, data.data.token);
+      message.success('Đăng ký thành công!');
+      navigate('/');
+    },
+    onError: (err) => {
+      message.error(err.message || 'Đăng ký thất bại!');
+    },
   });
 
-  const onSubmit = (data) => {
-    const { confirmPassword, ...registerData } = data;
-    registerUser(registerData);
+  const onFinish = (values) => {
+    const { confirmPassword, ...registerData } = values;
+    registerMutation.mutate(registerData);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Đăng ký</h1>
-          <p className="text-gray-600">Tạo tài khoản mới</p>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#f5f6fa',
+      padding: '24px 16px',
+    }}>
+      <div style={{ width: '100%', maxWidth: 420 }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <Title level={2} style={{ marginBottom: 4 }}>Đăng ký</Title>
+          <Text type="secondary">Tạo tài khoản mới</Text>
         </div>
 
-        <div className="card p-8">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Họ và tên
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  {...register('name')}
-                  className="input pl-10"
-                  placeholder="Nguyễn Văn A"
-                />
-              </div>
-              {errors.name && (
-                <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="email"
-                  {...register('email')}
-                  className="input pl-10"
-                  placeholder="your@email.com"
-                />
-              </div>
-              {errors.email && (
-                <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Số điện thoại (không bắt buộc)
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="tel"
-                  {...register('phone')}
-                  className="input pl-10"
-                  placeholder="0123456789"
-                />
-              </div>
-              {errors.phone && (
-                <p className="text-red-600 text-sm mt-1">{errors.phone.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mật khẩu
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="password"
-                  {...register('password')}
-                  className="input pl-10"
-                  placeholder="••••••••"
-                />
-              </div>
-              {errors.password && (
-                <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Xác nhận mật khẩu
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="password"
-                  {...register('confirmPassword')}
-                  className="input pl-10"
-                  placeholder="••••••••"
-                />
-              </div>
-              {errors.confirmPassword && (
-                <p className="text-red-600 text-sm mt-1">{errors.confirmPassword.message}</p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={isRegistering}
-              style={{
-                display: 'block', width: '100%',
-                padding: '10px 16px', borderRadius: 8,
-                background: isRegistering ? '#7dd3fc' : '#0284c7',
-                color: '#fff', fontWeight: 600, fontSize: 15,
-                border: 'none', cursor: isRegistering ? 'not-allowed' : 'pointer',
-              }}
+        <Card>
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={onFinish}
+            autoComplete="off"
+            size="large"
+          >
+            <Form.Item
+              name="name"
+              label="Họ và tên"
+              rules={[
+                { required: true, message: 'Vui lòng nhập họ tên' },
+                { min: 2, message: 'Tên phải có ít nhất 2 ký tự' },
+              ]}
             >
-              {isRegistering ? 'Đang đăng ký...' : 'Đăng ký'}
-            </button>
-          </form>
+              <Input
+                prefix={<UserOutlined style={{ color: '#9ca3af' }} />}
+                placeholder="Nguyễn Văn A"
+              />
+            </Form.Item>
 
-          <div className="mt-6 text-center text-sm">
-            <span className="text-gray-600">Đã có tài khoản? </span>
-            <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[
+                { required: true, message: 'Vui lòng nhập email' },
+                { type: 'email', message: 'Email không hợp lệ' },
+              ]}
+            >
+              <Input
+                prefix={<MailOutlined style={{ color: '#9ca3af' }} />}
+                placeholder="your@email.com"
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="phone"
+              label="Số điện thoại (không bắt buộc)"
+            >
+              <Input
+                prefix={<PhoneOutlined style={{ color: '#9ca3af' }} />}
+                placeholder="0123456789"
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="password"
+              label="Mật khẩu"
+              rules={[
+                { required: true, message: 'Vui lòng nhập mật khẩu' },
+                { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự' },
+              ]}
+            >
+              <Input.Password
+                prefix={<LockOutlined style={{ color: '#9ca3af' }} />}
+                placeholder="••••••••"
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="confirmPassword"
+              label="Xác nhận mật khẩu"
+              dependencies={['password']}
+              rules={[
+                { required: true, message: 'Vui lòng xác nhận mật khẩu' },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (!value || getFieldValue('password') === value) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(new Error('Mật khẩu không khớp'));
+                  },
+                }),
+              ]}
+            >
+              <Input.Password
+                prefix={<LockOutlined style={{ color: '#9ca3af' }} />}
+                placeholder="••••••••"
+              />
+            </Form.Item>
+
+            <Form.Item style={{ marginBottom: 16 }}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                block
+                loading={registerMutation.isPending}
+              >
+                Đăng ký
+              </Button>
+            </Form.Item>
+          </Form>
+
+          <div style={{ textAlign: 'center' }}>
+            <Text type="secondary">Đã có tài khoản? </Text>
+            <Link to="/login" style={{ fontWeight: 500 }}>
               Đăng nhập
             </Link>
           </div>
-        </div>
+
+          <div style={{ textAlign: 'center', marginTop: 12 }}>
+            <Link to="/" style={{ color: '#6b7280', fontSize: 14 }}>
+              ← Về trang chủ
+            </Link>
+          </div>
+        </Card>
       </div>
     </div>
   );
