@@ -32,5 +32,5 @@ uploads/
 dist/
 build/
 
-# Prisma
-prisma/migrations/
+# Prisma - giữ migrations để deploy
+# prisma/migrations/
