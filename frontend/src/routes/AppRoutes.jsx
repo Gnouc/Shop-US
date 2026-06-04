@@ -6,7 +6,9 @@ import ProtectedRoute from './ProtectedRoute';
 // Client Pages
 import HomePage from '@/pages/client/HomePage';
 import ProductsPage from '@/pages/client/ProductsPage';
+import ProductDetailPage from '@/pages/client/ProductDetailPage';
 import CartPage from '@/pages/client/CartPage';
+import AboutPage from '@/pages/client/AboutPage';
 
 // Auth Pages
 import LoginPage from '@/pages/auth/LoginPage';
@@ -31,7 +33,9 @@ export default function AppRoutes() {
         <Route element={<ClientLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/products" element={<ProductsPage />} />
-          <Route path="/products/:slug" element={<div className="container mx-auto px-4 py-16 text-center text-gray-500">Product Detail - Coming Soon</div>} />
+          <Route path="/products/:slug" element={<ProductDetailPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<AboutPage />} />
 
           <Route path="/cart" element={
             <ProtectedRoute><CartPage /></ProtectedRoute>

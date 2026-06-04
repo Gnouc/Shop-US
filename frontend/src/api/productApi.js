@@ -5,6 +5,10 @@ export const productApi = {
     return axiosClient.get('/products', { params });
   },
 
+  getAllAdmin: (params) => {
+    return axiosClient.get('/products/admin/all', { params });
+  },
+
   getById: (id) => {
     return axiosClient.get(`/products/${id}`);
   },

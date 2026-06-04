@@ -2,7 +2,7 @@ const prisma = require('../../database/prisma');
 const generateSlug = require('../../utils/generateSlug');
 
 class ProductsService {
-  async getAll(query) {
+  async getAll(query, options = {}) {
     const {
       page = 1,
       limit = 12,
@@ -16,7 +16,7 @@ class ProductsService {
 
     const skip = (page - 1) * limit;
     const where = {
-      status: 'ACTIVE',
+      ...(!options.includeInactive && { status: 'ACTIVE' }),
       ...(categoryId && { categoryId: parseInt(categoryId) }),
       ...(search && {
         OR: [
@@ -88,8 +88,8 @@ class ProductsService {
   }
 
   async getBySlug(slug) {
-    const product = await prisma.product.findUnique({
-      where: { slug },
+    const product = await prisma.product.findFirst({
+      where: { slug, status: 'ACTIVE' },
       include: {
         category: true,
         images: true,

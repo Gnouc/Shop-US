@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { cartApi } from '@/api/cartApi';
+import { API_BASE_URL } from '@/api/axiosClient';
 import { formatPrice } from '@/utils/format';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import Loading from '@/components/common/Loading';
@@ -80,7 +81,7 @@ export default function CartPage() {
                       >
                         {primaryImage ? (
                           <img
-                            src={primaryImage.imageUrl}
+                            src={primaryImage.imageUrl?.startsWith('http') ? primaryImage.imageUrl : `${API_BASE_URL}${primaryImage.imageUrl}`}
                             alt={product.name}
                             className="w-full h-full object-cover"
                           />

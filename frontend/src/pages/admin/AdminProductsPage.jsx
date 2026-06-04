@@ -15,6 +15,7 @@ import {
 } from '@ant-design/icons';
 
 const { Title } = Typography;
+const ALL_CATEGORIES_VALUE = 'all';
 
 export default function AdminProductsPage() {
   const { message } = App.useApp();
@@ -27,7 +28,7 @@ export default function AdminProductsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-products', { page, search, categoryId }],
-    queryFn: () => productApi.getAll({ page, limit: 10, search, categoryId }),
+    queryFn: () => productApi.getAllAdmin({ page, limit: 10, search, categoryId }),
   });
 
   const { data: categoriesData } = useQuery({
@@ -49,6 +50,7 @@ export default function AdminProductsPage() {
     onSuccess: () => {
       message.success('Đã cập nhật trạng thái');
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     },
     onError: (err) => message.error(err.message),
   });
@@ -63,7 +65,7 @@ export default function AdminProductsPage() {
   const categories = categoriesData?.data || [];
 
   const categoryOptions = [
-    { value: undefined, label: 'Tất cả danh mục' },
+    { value: ALL_CATEGORIES_VALUE, label: 'Tất cả danh mục' },
     ...categories.map((c) => ({ value: c.id, label: c.name })),
   ];
 
@@ -210,8 +212,11 @@ export default function AdminProductsPage() {
           />
           <Select
             options={categoryOptions}
-            value={categoryId}
-            onChange={(val) => { setCategoryId(val); setPage(1); }}
+            value={categoryId ?? ALL_CATEGORIES_VALUE}
+            onChange={(val) => {
+              setCategoryId(val === ALL_CATEGORIES_VALUE ? undefined : val);
+              setPage(1);
+            }}
             style={{ width: 200 }}
             placeholder="Lọc theo danh mục"
           />

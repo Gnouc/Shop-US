@@ -10,6 +10,15 @@ class ProductsController {
     }
   }
 
+  async getAllAdmin(req, res, next) {
+    try {
+      const result = await productsService.getAll(req.query, { includeInactive: true });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getById(req, res, next) {
     try {
       const result = await productsService.getById(parseInt(req.params.id));

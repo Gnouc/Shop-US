@@ -16,6 +16,25 @@ export default function ProductFormModal({ product, categories, onClose }) {
   const [form] = Form.useForm();
   const [images, setImages] = useState([]);
 
+  const showApiError = (err, fallbackMessage) => {
+    const apiErrors = Array.isArray(err.errors) ? err.errors : [];
+
+    if (apiErrors.length > 0) {
+      form.setFields(
+        apiErrors
+          .filter((item) => item.field)
+          .map((item) => ({
+            name: item.field,
+            errors: [item.message],
+          }))
+      );
+      message.error(apiErrors[0].message || err.message || fallbackMessage);
+      return;
+    }
+
+    message.error(err.message || fallbackMessage);
+  };
+
   useEffect(() => {
     if (product) {
       form.setFieldsValue({
@@ -51,7 +70,7 @@ export default function ProductFormModal({ product, categories, onClose }) {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       onClose();
     },
-    onError: (err) => message.error(err.message || 'Tạo thất bại'),
+    onError: (err) => showApiError(err, 'Tạo thất bại'),
   });
 
   const updateMutation = useMutation({
@@ -62,14 +81,16 @@ export default function ProductFormModal({ product, categories, onClose }) {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       onClose();
     },
-    onError: (err) => message.error(err.message || 'Cập nhật thất bại'),
+    onError: (err) => showApiError(err, 'Cập nhật thất bại'),
   });
 
   const handleOk = () => {
     form.validateFields().then((values) => {
       const payload = {
         ...values,
-        salePrice: values.salePrice || null,
+        price: Number(values.price),
+        salePrice: values.salePrice === undefined || values.salePrice === null ? null : Number(values.salePrice),
+        stock: Number(values.stock),
         images: images.map((img, idx) => ({
           url: img.imageUrl,
           isPrimary: img.isPrimary || idx === 0,

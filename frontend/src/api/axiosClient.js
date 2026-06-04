@@ -32,7 +32,9 @@ axiosClient.interceptors.response.use(
     return response.data;
   },
   (error) => {
-    const message = error.response?.data?.message || 'Đã xảy ra lỗi';
+    const responseData = error.response?.data;
+    const errorMessage = responseData?.message || 'Đã xảy ra lỗi';
+    const validationErrors = responseData?.errors || [];
     
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
@@ -40,7 +42,12 @@ axiosClient.interceptors.response.use(
       window.location.href = '/login';
     }
     
-    return Promise.reject({ ...error, message });
+    // Return object đơn giản, không spread axios error
+    return Promise.reject({
+      message: errorMessage,
+      errors: validationErrors,
+      status: error.response?.status,
+    });
   }
 );
 

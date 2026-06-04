@@ -11,19 +11,34 @@ const productValidation = [
   body('name').notEmpty().withMessage('Product name is required'),
   body('categoryId').isInt().withMessage('Valid category is required'),
   body('price').isFloat({ min: 0 }).withMessage('Valid price is required'),
-  body('salePrice').optional().isFloat({ min: 0 }).withMessage('Sale price must be positive'),
+  body('salePrice')
+    .optional({ nullable: true })
+    .custom((value) => {
+      if (value === null || value === undefined || value === '' || value === 0) return true;
+      if (isNaN(value) || Number(value) < 0) {
+        throw new Error('Sale price must be positive');
+      }
+      return true;
+    }),
   body('stock').optional().isInt({ min: 0 }).withMessage('Stock must be non-negative'),
   body('brand').optional(),
   body('origin').optional(),
   body('description').optional(),
 ];
 
+// Admin routes
+router.get(
+  '/admin/all',
+  authMiddleware,
+  roleMiddleware('ADMIN'),
+  productsController.getAllAdmin
+);
+
 // Public routes
 router.get('/', productsController.getAll);
 router.get('/slug/:slug', productsController.getBySlug);
 router.get('/:id', productsController.getById);
 
-// Admin routes
 router.post(
   '/',
   authMiddleware,

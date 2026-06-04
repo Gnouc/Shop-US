@@ -93,7 +93,8 @@ export default function ProductsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Tìm kiếm sản phẩm..."
-                className="input input-with-left-icon w-full"
+                className="input w-full"
+                style={{ paddingLeft: 40 }}
               />
             </div>
             <button type="submit" className="btn btn-primary">
