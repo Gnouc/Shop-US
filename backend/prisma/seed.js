@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 // ============================================================
 // SAFE SEED - Chỉ thêm data nếu chưa tồn tại
 // Không bao giờ xóa data cũ → an toàn khi chạy nhiều lần
+// Ảnh default nằm trong /uploads/products/ (push lên git)
 // ============================================================
 
 async function seedAdmin() {
@@ -22,7 +23,7 @@ async function seedAdmin() {
       email: 'admin@healthstore.com',
       password: hashed,
       name: 'Admin',
-      phone: '0123456789',
+      phone: '0834464618',
       role: 'ADMIN',
     },
   });
@@ -56,7 +57,6 @@ async function seedCategories() {
 }
 
 async function seedProducts() {
-  // Lấy danh mục từ DB (có thể là từ seed hoặc do admin tạo)
   const categories = await prisma.category.findMany();
   if (categories.length === 0) {
     console.log('⚠️  Chưa có danh mục, bỏ qua seed sản phẩm');
@@ -65,9 +65,11 @@ async function seedProducts() {
 
   const getCatId = (slug) => categories.find((c) => c.slug === slug)?.id;
 
+  // Mapping: slug → ảnh thực tế trong /uploads/products/
   const defaultProducts = [
     {
       slug: 'nature-made-multivitamin',
+      image: '/uploads/products/multivitamin.webp',
       data: {
         name: 'Nature Made Multivitamin',
         categoryId: getCatId('thuc-pham-chuc-nang'),
@@ -78,6 +80,7 @@ async function seedProducts() {
     },
     {
       slug: 'omega-3-fish-oil-1000mg',
+      image: '/uploads/products/omega-3.jpg',
       data: {
         name: 'Omega-3 Fish Oil 1000mg',
         categoryId: getCatId('thuc-pham-chuc-nang'),
@@ -88,6 +91,7 @@ async function seedProducts() {
     },
     {
       slug: 'vitamin-c-1000mg',
+      image: '/uploads/products/vitamin-c.webp',
       data: {
         name: 'Vitamin C 1000mg',
         categoryId: getCatId('vitamin-tong-hop'),
@@ -98,6 +102,7 @@ async function seedProducts() {
     },
     {
       slug: 'vitamin-d3-5000-iu',
+      image: '/uploads/products/vitamin-d3.webp',
       data: {
         name: 'Vitamin D3 5000 IU',
         categoryId: getCatId('vitamin-tong-hop'),
@@ -108,6 +113,7 @@ async function seedProducts() {
     },
     {
       slug: 'calcium-600mg-d3',
+      image: '/uploads/products/calcium.webp',
       data: {
         name: 'Calcium 600mg + D3',
         categoryId: getCatId('canxi-xuong-khop'),
@@ -118,6 +124,7 @@ async function seedProducts() {
     },
     {
       slug: 'milk-thistle-1000mg',
+      image: '/uploads/products/milk-thistle.webp',
       data: {
         name: 'Milk Thistle 1000mg',
         categoryId: getCatId('bo-gan'),
@@ -128,6 +135,7 @@ async function seedProducts() {
     },
     {
       slug: 'lutein-20mg-eye-health',
+      image: '/uploads/products/lutein.webp',
       data: {
         name: 'Lutein 20mg Eye Health',
         categoryId: getCatId('bo-mat'),
@@ -138,6 +146,7 @@ async function seedProducts() {
     },
     {
       slug: 'ensure-original-nutrition-powder',
+      image: '/uploads/products/ensure.webp',
       data: {
         name: 'Ensure Original Nutrition Powder',
         categoryId: getCatId('sua-dinh-duong'),
@@ -148,6 +157,7 @@ async function seedProducts() {
     },
     {
       slug: 'similac-pro-advance-infant-formula',
+      image: '/uploads/products/similac.webp',
       data: {
         name: 'Similac Pro-Advance Infant Formula',
         categoryId: getCatId('sua-dinh-duong'),
@@ -158,6 +168,7 @@ async function seedProducts() {
     },
     {
       slug: 'calvin-klein-ck-one-edt-200ml',
+      image: '/uploads/products/calvin.PNG',
       data: {
         name: 'Calvin Klein CK One EDT 200ml',
         categoryId: getCatId('nuoc-hoa'),
@@ -168,6 +179,7 @@ async function seedProducts() {
     },
     {
       slug: 'crest-3d-white-toothpaste',
+      image: '/uploads/products/crest.webp',
       data: {
         name: 'Crest 3D White Toothpaste',
         categoryId: getCatId('cham-soc-rang-mieng'),
@@ -178,6 +190,7 @@ async function seedProducts() {
     },
     {
       slug: 'degree-men-antiperspirant-deodorant',
+      image: '/uploads/products/degree.webp',
       data: {
         name: 'Degree Men Antiperspirant Deodorant',
         categoryId: getCatId('cham-soc-ca-nhan'),
@@ -188,6 +201,7 @@ async function seedProducts() {
     },
     {
       slug: 'dove-advanced-care-deodorant',
+      image: '/uploads/products/dove.webp',
       data: {
         name: 'Dove Advanced Care Deodorant',
         categoryId: getCatId('cham-soc-ca-nhan'),
@@ -199,21 +213,36 @@ async function seedProducts() {
   ];
 
   let created = 0;
-  for (const { slug, data } of defaultProducts) {
-    if (!data.categoryId) continue; // bỏ qua nếu không tìm được category
+  for (const { slug, image, data } of defaultProducts) {
+    if (!data.categoryId) continue;
 
     const existing = await prisma.product.findUnique({ where: { slug } });
     if (!existing) {
       const product = await prisma.product.create({ data: { ...data, slug } });
-      // Thêm placeholder image
+      // Gắn ảnh thực tế
       await prisma.productImage.create({
         data: {
           productId: product.id,
-          imageUrl: `/uploads/products/default-product.png`,
+          imageUrl: image,
           isPrimary: true,
         },
       });
       created++;
+    } else {
+      // Nếu sản phẩm đã tồn tại nhưng chưa có ảnh → thêm ảnh
+      const existingImage = await prisma.productImage.findFirst({
+        where: { productId: existing.id },
+      });
+      if (!existingImage) {
+        await prisma.productImage.create({
+          data: {
+            productId: existing.id,
+            imageUrl: image,
+            isPrimary: true,
+          },
+        });
+        console.log(`  📷 Thêm ảnh cho "${existing.name}"`);
+      }
     }
   }
 

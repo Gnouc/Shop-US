@@ -24,9 +24,9 @@ Thumbs.db
 *.swo
 *~
 
-# Uploads
-uploads/
-!uploads/.gitkeep
+# Uploads - giữ ảnh default
+# uploads/
+# !uploads/.gitkeep
 
 # Build
 dist/
