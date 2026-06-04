@@ -229,11 +229,12 @@ async function seedProducts() {
       });
       created++;
     } else {
-      // Nếu sản phẩm đã tồn tại nhưng chưa có ảnh → thêm ảnh
+      // Sản phẩm đã tồn tại → cập nhật ảnh về default (fix ảnh bị mất khi deploy)
       const existingImage = await prisma.productImage.findFirst({
-        where: { productId: existing.id },
+        where: { productId: existing.id, isPrimary: true },
       });
       if (!existingImage) {
+        // Chưa có ảnh → tạo mới
         await prisma.productImage.create({
           data: {
             productId: existing.id,
@@ -242,6 +243,13 @@ async function seedProducts() {
           },
         });
         console.log(`  📷 Thêm ảnh cho "${existing.name}"`);
+      } else if (existingImage.imageUrl !== image) {
+        // Ảnh đang trỏ tới file random (upload cũ bị mất) → reset về default
+        await prisma.productImage.update({
+          where: { id: existingImage.id },
+          data: { imageUrl: image },
+        });
+        console.log(`  🔄 Reset ảnh cho "${existing.name}" → ${image}`);
       }
     }
   }
